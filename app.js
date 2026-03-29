@@ -7,10 +7,12 @@ let nightResults = {}; let hostTally = {}; let defenseTarget = null;
 
 // --- نظام قراءة الملفات الصوتية الخاصة بك ---
 function playSound(soundName) {
-    try {
-        let audio = new Audio(`sounds/${soundName}.mp3`);
-        audio.play().catch(e => console.log("الصوت غير متوفر مؤقتاً:", soundName));
-    } catch(e) {}
+    let audio = new Audio(`./sounds/${soundName}.mp3`);
+    audio.play().catch(e => {
+        console.error("خطأ في تشغيل الصوت: ", soundName, e);
+        // محاولة ثانية في حال كان المسار مختلف
+        new Audio(`/sounds/${soundName}.mp3`).play();
+    });
 }
 
 function showScreen(screenId) {
@@ -260,8 +262,26 @@ socket.on('moveToGraveyard', (target) => {
     if (playerName === target) {
         isAlive = false;
         showScreen('graveyard-screen');
+        // بعد 10 ثوانٍ نفتح له واجهة المشاهدة
+        setTimeout(() => {
+            const graveyardBox = document.getElementById("graveyard-screen");
+            graveyardBox.innerHTML = `<h2 class="blood-text" style="font-size:1.5rem">وضع المشاهدة</h2>
+                                      <div id="ghost-info" style="text-align:right; padding:10px; color:yellow;"></div>`;
+            updateGhostDashboard();
+        }, 10000);
     }
 });
+
+function updateGhostDashboard() {
+    const info = document.getElementById("ghost-info");
+    if(info) {
+        let fullList = "<b>كشف الهويات للأشباح:</b><br>";
+        for(let p in gameRoles) {
+            fullList += `${p}: ${gameRoles[p]} ${alivePlayers.includes(p) ? '✅' : '💀'}<br>`;
+        }
+        info.innerHTML = fullList;
+    }
+}
 
 socket.on('showDeadPlayer', (data) => {
     if(!isAlive) return;
