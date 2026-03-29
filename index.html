@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>لعبة المافيا</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="bg-overlay"></div>
+
+    <div id="login-screen" class="screen active glass-panel">
+        <h1 class="blood-title">المافيا</h1>
+        <input type="text" id="player-name" placeholder="أدخل اسمك..." autocomplete="off">
+        <button class="btn-3d-red" onclick="createGame()">إنشاء لعبة</button>
+        <div class="divider">أو</div>
+        <input type="text" id="room-code-input" placeholder="أدخل كود الغرفة..." class="hidden">
+        <button class="btn-3d-red" id="join-btn-initial" onclick="document.getElementById('room-code-input').classList.remove('hidden'); this.classList.add('hidden'); document.getElementById('join-btn-final').classList.remove('hidden');">دخول لعبة</button>
+        <button class="btn-3d-orange hidden" id="join-btn-final" onclick="joinGame()">انضمام</button>
+    </div>
+
+    <div id="waiting-room-screen" class="screen hidden glass-panel">
+        <h2 class="yellow-text">الغرفة: <span id="display-room-code" class="blood-text"></span></h2>
+        <div class="scoreboard hidden" id="lobby-scoreboard">
+            <span class="blood-text">المافيا: <span id="score-mafia">0</span></span> | <span class="yellow-text">المواطنون: <span id="score-citizens">0</span></span>
+        </div>
+        <p class="bold-text">عدد اللاعبين: <span id="player-count">1</span></p>
+        <ul id="players-list" class="players-list-container"></ul>
+        <button id="host-start-btn" class="btn-3d-red hidden" onclick="goToRoleSelection()">إعدادات الغرفة</button>
+        <p id="waiting-msg" class="bold-text yellow-text">بانتظار المسؤول...</p>
+    </div>
+
+    <div id="lobby-screen" class="screen hidden glass-panel">
+        <h2 class="blood-title" style="font-size: 2.5rem;">الشخصيات</h2>
+        <div class="roles-selection" style="text-align: right; margin: 20px 0;">
+            <label class="bold-text"><input type="checkbox" id="role-doctor" checked> الطبيب</label><br><br>
+            <label class="bold-text"><input type="checkbox" id="role-detective" checked> المحقق</label><br><br>
+            <label class="bold-text"><input type="checkbox" id="role-sniper" checked> القناص</label><br><br>
+            <label class="bold-text"><input type="checkbox" id="role-wronged"> الفتى المظلوم</label>
+        </div>
+        <button class="btn-3d-red" onclick="distributeRoles()">توزيع الأدوار</button>
+    </div>
+
+    <div id="role-reveal-screen" class="screen hidden">
+        <div class="card-container" onclick="flipCard()">
+            <div class="card" id="player-card">
+                <div class="card-front glass-panel"><h3 class="yellow-text">انقر لقلب البطاقة</h3></div>
+                <div class="card-back glass-panel"><h2 id="role-name" class="blood-title" style="font-size: 2.5rem;"></h2></div>
+            </div>
+        </div>
+        <button id="ready-btn" class="btn-3d-orange hidden" style="margin-top:30px;" onclick="playerReady()">أنا مستعد</button>
+    </div>
+
+    <div id="gameplay-screen" class="screen hidden glass-panel">
+        <div id="doctor-shield" class="hidden">🛡️ تم الإنقاذ</div>
+        <h2 id="system-message" class="yellow-text" style="font-size: 1.5rem; line-height: 1.5;"></h2>
+        
+        <div id="action-area" class="hidden" style="margin-top: 20px;">
+            <h3 id="action-title" class="blood-text">اختر هدفك:</h3>
+            <div id="target-list" style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;"></div>
+            <button id="skip-action-btn" class="btn-3d-orange hidden" onclick="submitAction('skip')">تخطي</button>
+        </div>
+        <div id="detective-result" class="hidden bold-text" style="margin-top:20px; font-size:1.5rem;"></div>
+
+        <div id="host-day-controls" class="hidden" style="margin-top: 20px;">
+            <button class="btn-3d-orange" onclick="triggerDiscussion()">بدء النقاش</button>
+        </div>
+    </div>
+
+    <div id="voting-screen" class="screen hidden glass-panel">
+        <h2 class="blood-text">صوّت على المشتبه به</h2>
+        <div id="voting-list" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 20px;"></div>
+        <button class="btn-3d-orange" style="margin-top: 20px;" onclick="submitVote('skip')">تخطي التصويت</button>
+        <button id="host-end-vote-btn" class="btn-3d-red hidden" style="margin-top: 10px;" onclick="tallyAndShowVotes()">إنهاء وعرض النتائج</button>
+    </div>
+
+    <div id="vote-results-screen" class="screen hidden glass-panel">
+        <h2 class="yellow-text">نتائج التصويت</h2>
+        <div id="tally-container" style="display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; margin: 20px 0;"></div>
+        
+        <div id="defense-area" class="hidden" style="margin-top: 20px;">
+            <h2 class="blood-text">وقت التبرير: <span id="defense-target"></span></h2>
+            <div class="timer-bar"><div id="timer-fill"></div></div>
+            <div id="host-defense-controls" class="hidden" style="margin-top: 20px;">
+                <button class="btn-3d-red" onclick="hostDecideDefense('execute')">إبقاء التصويت (إعدام)</button>
+                <button class="btn-3d-orange" onclick="hostDecideDefense('revote')">إعادة التصويت</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="graveyard-screen" class="screen hidden glass-panel" style="border-color: #555;">
+        <h1 class="blood-title" style="font-size: 2.5rem; color: #555;">أنت الآن في المقبرة</h1>
+        <p class="bold-text">لقد خرجت من اللعبة. استمتع بمشاهدة الكارثة.</p>
+    </div>
+
+    <div id="execution-stamp" class="hidden">تم الإعدام</div>
+
+    <div id="victory-screen" class="screen hidden">
+        <h1 id="victory-title" style="font-size: 4rem; text-shadow: 0 0 20px #fff;"></h1>
+        <h2 class="bold-text" style="margin-bottom: 30px;">النقاط: المافيا <span id="final-mafia-score"></span> | المواطنون <span id="final-citizens-score"></span></h2>
+        <button id="play-again-btn" class="btn-3d-orange hidden" onclick="requestPlayAgain()">لعب جولة أخرى</button>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
